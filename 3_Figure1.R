@@ -7,6 +7,8 @@ library(viridis)
 library(gstat)#see package details for class that is required
 #ln.NAtm.NAdd = log(Added N +1)
 e001 <- read_csv("2020-02-03-e001.csv")
+e001$NTrt <- as.factor(e001$NTrt)
+e001$NTrt <- factor(e001$NTrt,levels(e001$NTrt)[c(9,1,2:8)])
 meansr <- e001 %>% 
   filter(Year<2005) %>%
   filter(Year>1994)%>%
@@ -262,7 +264,6 @@ mean.resid.p <- mean.resid.p+theme(axis.title = element_text(size=7),
 c1 <- c1+theme(axis.title = element_text(size=7),
                axis.text = element_text(size=7))
 #
-ggplot(meansr,aes(x=NTrt,y=sr_m))+geom_point()
 #
 ggsave(filename = "Figures/Figure1_neighe001.eps",
        device = cairo_ps,
