@@ -139,7 +139,8 @@ yrnfun <- function(yr,dat,vector,neighmat,var,yvar){
 }
 yrlist <- unique(e001$Year)#year list
 yrlist <- set_names(yrlist)#it needs names
-#for some reason the future_map_dfr needs an extra quo, it's something to do with
+#for some reason the future_map_dfr needs an extra quo,
+#it's something to do with
 #how it calls the variable;may break in future versions
 #get neighbor SR
 mat1 <- future_map_dfr(.x = yrlist,.f = yrnfun,
@@ -179,6 +180,7 @@ checkfun.edge<- function(yr,dat,var){
   a1 <- mat1 %>% filter(Year==yr & Plot==13) %>% select(means.Sr.4)
   a1==check$sr
 }
+#run tests
 all(future_map_lgl(.x = yrlist,.f = checkfun.center,dat=e001,var=quo(sr)))==TRUE
 all(future_map_lgl(.x = yrlist,.f = checkfun.corner,dat=e001,var=quo(sr)))==TRUE
 all(future_map_lgl(.x = yrlist,.f = checkfun.edge,dat=e001,var=quo(sr)))==TRUE
@@ -281,6 +283,7 @@ e001$edgeeffect <- ifelse(e001$Plot %in% edge1,"outside","inside")
 e001$edgeeffect <- as.factor(e001$edgeeffect)
 #######
 #get long data frame
+colnames(e001)
 e001.l <- e001 %>% gather(Specid,Biomass,Achimill:Violsagi)
 #get presence/absence
 e001.l$abun <- ifelse(e001.l$Biomass>0,1,0)
@@ -294,8 +297,8 @@ dat.m <- e001 %>% group_by(Plot) %>%
   summarise(means.Sr.4_mean=mean(means.Sr.4))
 dat <- left_join(dat,dat.m)
 #
-write_csv(path = "2020-02-03-e001.csv",x = dat)
-write_csv(path = "2020-02-03-e001.l.csv",x = e001.l)
+write_csv(file = "2021-06-25-e001.csv",x = dat)
+write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
 #clean it up
 rm(list=setdiff(ls(), c("e001","e001.l","srNXdata","dat")))
 source("neighborhood_functions.R")
