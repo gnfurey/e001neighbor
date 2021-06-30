@@ -1,5 +1,4 @@
 source("neighborhood_functions.R")
-
 library(tidyverse)
 library(nlme)
 library(viridis)
@@ -11,6 +10,9 @@ e001.l$NTrt <- factor(e001.l$NTrt,levels(e001.l$NTrt)[c(9,1,2:8)])
 #
 #get three dominant species 
 splist <- c("Schiscop","Agrorepe","Poaprate")
+e001.l <- e001.l %>%
+  filter(Specid %in% splist)
+# write.csv(x = e001.l,file = "2021-06-25-e001.l.csv")
 #########
 #plotting function and model fits
 plot_1 <- function(species,title1,c1,c2,ntrt){
@@ -83,7 +85,7 @@ plot_1 <- function(species,title1,c1,c2,ntrt){
   newdat$neighbor <- round(newdat$neighbor,0)
   #make a factor
   tmp <- data.frame(neighbor=c(val1,m1,val2),
-                    Neigh_biomass =c("200% Mean","Mean","25% Mean"))
+                    Neigh_biomass =c("2 * Mean","Mean","0.25 * Mean"))
   #round
   tmp$neighbor <- round(tmp$neighbor,0)
   #merge together with new character
@@ -94,10 +96,18 @@ plot_1 <- function(species,title1,c1,c2,ntrt){
   newdat$Neigh_biomass <- factor(newdat$Neigh_biomass,
                                  levels(newdat$Neigh_biomass)[c(1,3,2)])
   #make plotting function
+  
+  #
   pfun <- function(ntrt,title1){
-    # ntrt <- "I-0.00";title1="test"
+    # ntrt <- "F-9.52";title1="test"
     newdat1 <- newdat %>% 
       filter(NTrt %in% ntrt)
+    #
+    newdat1$NTrt <- as.character(newdat1$NTrt)
+    newdat1$NTrt <- ifelse(newdat1$NTrt=="I-0.00","0.00 g N",newdat1$NTrt)
+    newdat1$NTrt <- ifelse(newdat1$NTrt=="D-3.40","3.40 g N",newdat1$NTrt)
+    newdat1$NTrt <- ifelse(newdat1$NTrt=="F-9.52","9.52 g N",newdat1$NTrt)
+    #
     p1 <- ggplot(newdat1,
                  aes(x=Year,y=fit^2,col=Neigh_biomass))+
       scale_color_brewer(palette = "Dark2",

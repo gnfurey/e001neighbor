@@ -125,6 +125,11 @@ coef <- mods %>%
 justImean <- left_join(justImean,coef)
 ##run major axis regression
 justImean$estimate <- justImean$estimate *-1
+#
+justImean %>% 
+  filter(Plot %in% c(18,28,30)) %>% 
+  summarise(estimate=mean(estimate))
+#
 sma1 <- smatr::sma(estimate~means.Sr.4,data=justImean)
 #reported in text
 sma1$coef

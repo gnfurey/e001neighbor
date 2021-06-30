@@ -298,7 +298,14 @@ dat.m <- e001 %>% group_by(Plot) %>%
 dat <- left_join(dat,dat.m)
 #
 write_csv(file = "2021-06-25-e001.csv",x = dat)
+# write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
+#file is too big with all species present
+#shorten to just those we use
+splist <- c("Schiscop","Agrorepe","Poaprate")
+e001.l <- e001.l %>%
+  filter(Specid %in% splist)
 write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
+
 #clean it up
 rm(list=setdiff(ls(), c("e001","e001.l","srNXdata","dat")))
 source("neighborhood_functions.R")
