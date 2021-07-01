@@ -18,9 +18,9 @@ This file takes the species richness of each plot and its experimental treatment
 This file tests a linear mixed effect model on species richness in the six control plots. It generates Figure 3 and Supplemental Table S2.     
 6_Figure4_e001Cneigh.R  
 This file runs a separate linear regression for each control plot through time. It then compares those slopes with each plot's average neighborhood species richness using major axis regression in package sma. It generates Figure 4 and Supplemental Figure S1.  
-7_Figure5_e001Cneigh.R  
-This file runs a separate linear mixed effects model for three species using their abundance as the response variable. The dependency of each species' abundance is tested on its neighborhood abundance, the experimental nutrient addition variable (Factor of 9 levels), and year as a continuous variable with a three-way interaction. It then generates an interaction plot for each species at three experimental treatments. It generates Figure 5 and Supplemental Figure 2. 
-AppendixS2_gifs_e001Cneigh.R  
+7_Figure5_e001Cneigh.R    
+This file runs a separate linear mixed effects model for three species using their abundance as the response variable. The dependency of each species' abundance is tested on its neighborhood abundance, the experimental nutrient addition variable (Factor of 9 levels), and year as a continuous variable with a three-way interaction. It then generates an interaction plot for each species at three experimental treatments. It generates Figure 5 and Supplemental Figure 2.   
+AppendixS2_gifs_e001Cneigh.R    
 This file takes the abundance data for each species and then uses package gganimate to generate a video for each species. Videos are rendered into .mov format using ffmpeg. Each figure was created with R version 4.0.4 using package ggplot2 (3.3.2) (Wickham 2016, ggplot2 authors 2020), animated using R package gganimate (1.0.7)  
 helperfunctions_e001Cneigh.R    
 This file contains a few helper functions for matching species' metadata, several long figure captions, a function to calculate the standard error, and the negation of the function %in%.    
