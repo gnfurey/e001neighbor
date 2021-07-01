@@ -1,6 +1,6 @@
 # e001neighbor
 Reproducible analysis for e001 Field C metacommunity manuscript. Code pulls data from the LTER pasta database.      
-1_makefile_e001Cneigh.R. 
+1_makefile_e001Cneigh.R.   
 This file pulls the raw data and calculates species richness for each experimental plot, neighborhood species richness for each plot, and neighborhood abundance for each species in each plot. This file contains custom functions to calculate the mean neighborhood value for species richness in each year for each plot and for each species in each year for each plot. It also includes several checking functions to ensure the custom function did not make any calculation errors.   
 sr = focal plot species richness     
 mean.Sr.4 = mean neighborhood species richness in the four adjacent plots  
