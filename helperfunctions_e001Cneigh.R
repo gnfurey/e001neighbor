@@ -2,10 +2,6 @@
 "%ni%" <- Negate("%in%")
 #get path
 path <- "ccesrPlantSpeciesData.csv"
-#get scaled values
-scale_this <- function(x){
-  (x - mean(x, na.rm=TRUE)) / sd(x, na.rm=TRUE)
-}
 #matching function 
 get_specid<-function(Species) {
   taxdat <-read.csv(path)
@@ -16,11 +12,6 @@ get_funcgroup<-function(Specid) {
   taxdat <-read.csv(path)
   fg <- taxdat[match(Specid, taxdat$Specid),"FunctionalGroup"]
   fg
-}
-#get AIC diff
-aicfun <- function(mod1,mod2){
-  print(round(diff(anova(mod1,mod2)$AIC),1))
-  print(round(anova(mod1,mod2)$L.Ratio[2],1))
 }
 #get standard error 
 #https://stackoverflow.com/questions/2676554/in-r-how-to-find-the-standard-error-of-the-mean

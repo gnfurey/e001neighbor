@@ -8,7 +8,7 @@ library(lme4)
 library(nlme)
 library(viridis)
 future::plan(multisession)
-source("neighborhood_functions.R")
+source("helperfunctions_e001Cneigh.R")
 ##########
 # Package ID: knb-lter-cdr.14.8 Cataloging System:https://pasta.edirepository.org.
 # Data set title: Plant aboveground biomass data: Long-Term Nitrogen Deposition: Population, Community, and Ecosystem Consequences.
@@ -101,10 +101,8 @@ e001$Sr.vegan <- specnumber(SpeciesBioData.w)
 #check dplyr and vegan SR
 tmp <-  e001 %>% ungroup() %>% select(sr,Sr.vegan,Plot,Year)
 all(as.integer(tmp$sr)==as.integer(tmp$Sr.vegan))#they are equal
-#
-e001$ShanWinr <- diversity(SpeciesBioData.w)#get shannon's diversity
-e001$Evenness <- e001$ShanWinr/log(e001$sr)#get Pielou's Evenness
-e001$EtoH <- exp(e001$ShanWinr)#get e^H'
+#remove 
+e001$Sr.vegan <- NULL
 ###########
 #get spatial arrangment of plots using spdep
 #create coordinate matrix
@@ -139,9 +137,6 @@ yrnfun <- function(yr,dat,vector,neighmat,var,yvar){
 }
 yrlist <- unique(e001$Year)#year list
 yrlist <- set_names(yrlist)#it needs names
-#for some reason the future_map_dfr needs an extra quo,
-#it's something to do with
-#how it calls the variable;may break in future versions
 #get neighbor SR
 mat1 <- future_map_dfr(.x = yrlist,.f = yrnfun,
                        dat=e001,vector=plot_vec,
@@ -184,20 +179,15 @@ checkfun.edge<- function(yr,dat,var){
 all(future_map_lgl(.x = yrlist,.f = checkfun.center,dat=e001,var=quo(sr)))==TRUE
 all(future_map_lgl(.x = yrlist,.f = checkfun.corner,dat=e001,var=quo(sr)))==TRUE
 all(future_map_lgl(.x = yrlist,.f = checkfun.edge,dat=e001,var=quo(sr)))==TRUE
-#get the same for neighbor nitrogen
-mat2 <- future_map_dfr(.x = yrlist,.f = yrnfun,
-                       dat=e001,vector=plot_vec,
-                       neighmat=neighbor,var=quo(NAdd),.id="Year",
-                       yvar="means.NAdd.4")
 #join it up
 e001$Year <- as.character(e001$Year)
 e001 <- left_join(e001,mat1)
-e001 <- left_join(e001,mat2)
 ##############
 #include zeros for neighbor matrix for species
 SpeciesBioData.wfull <- SpeciesBioData %>%
   select(Plot,Year,Specid,Biomass) %>% 
   spread(Specid,Biomass,fill=0)
+colnames(SpeciesBioData.wfull)
 SpeciesBioData.l <- SpeciesBioData.wfull %>% gather(Specid,Biomass,Achimill:Violsagi)  
 ###########
 #function to calculate neighborhood for all species
@@ -215,9 +205,8 @@ iteratefun <- function(x,dat){
 }
 #
 #specieslist
-splist <- sort(unique(SpeciesBioData$Specid))
+splist <- c("Schiscop","Agrorepe","Poaprate")
 #run function 
-# save before you run because it takes a while
 out <- future_map(.x = splist,.f =iteratefun,dat=SpeciesBioData.l)
 #turn list of list into tibble
 specs <- reduce(.x = out,.f = left_join,by=c("Plot","Year"))
@@ -249,7 +238,7 @@ checkfun.corner_spec<- function(yr,dat,x){
 }
 #
 checkfun.center_spec<- function(yr,dat,x){
-  # dat=e001;x="Arteludo";yr=1982;
+  # dat=e001;x="Schiscop";yr=1982;
   lab <- paste(x,".neighbor",sep="")
   check <- dat %>% filter(Year==yr) %>% filter(Plot %in% c(2,7,9,14)) %>% ungroup() %>% 
     summarise(var=mean(!!sym(x)))
@@ -257,36 +246,14 @@ checkfun.center_spec<- function(yr,dat,x){
   a1==check$var
 }
 #
-all(future_map_lgl(.x = yrlist,.f = checkfun.center_spec,dat=e001,x="Arteludo"))==TRUE
-all(future_map_lgl(.x = yrlist,.f = checkfun.corner_spec,dat=e001,x="Arteludo"))==TRUE
-all(future_map_lgl(.x = yrlist,.f = checkfun.edge_spec,dat=e001,x="Arteludo"))==TRUE
+all(future_map_lgl(.x = yrlist,.f = checkfun.center_spec,dat=e001,x="Schiscop"))==TRUE
+all(future_map_lgl(.x = yrlist,.f = checkfun.corner_spec,dat=e001,x="Schiscop"))==TRUE
+all(future_map_lgl(.x = yrlist,.f = checkfun.edge_spec,dat=e001,x="Schiscop"))==TRUE
 #
 ########
-#create standardized coefficients
-#get start and stop symbols
-first <- as.character(unique(SpeciesBioData.l$Specid)[1])
-last <- as.character(last(unique(SpeciesBioData.l$Specid)))
-first.neigh <- paste(first,"neighbor",sep=".")
-last.neigh <- paste(last,"neighbor",sep=".")
-#
-e001$Year <- as.integer(e001$Year)
-#create matrix of standardized y variables using Z scores 
-e001<- e001 %>%  ungroup() %>% 
-  mutate_at(vars(NAtm.NAdd,Year,ln.NAtm.NAdd,NAdd,
-                 Year,
-                 means.Sr.4,!!sym(first.neigh):!!sym(last.neigh)),
-            funs(c=scale_this))
-#######
-#create edge variable 
-edge1 <- c(seq(1,6),seq(7,49,by=6),seq(50,53),seq(6,54,by=6))
-e001$edgeeffect <- ifelse(e001$Plot %in% edge1,"outside","inside")
-e001$edgeeffect <- as.factor(e001$edgeeffect)
-#######
 #get long data frame
 colnames(e001)
 e001.l <- e001 %>% gather(Specid,Biomass,Achimill:Violsagi)
-#get presence/absence
-e001.l$abun <- ifelse(e001.l$Biomass>0,1,0)
 #and functional groups
 e001.l$func <- get_funcgroup(e001.l$Specid)
 #
@@ -301,12 +268,9 @@ write_csv(file = "2021-06-25-e001.csv",x = dat)
 # write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
 #file is too big with all species present
 #shorten to just those we use
-splist <- c("Schiscop","Agrorepe","Poaprate")
 e001.l <- e001.l %>%
   filter(Specid %in% splist)
 write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
-
 #clean it up
 rm(list=setdiff(ls(), c("e001","e001.l","srNXdata","dat")))
-source("neighborhood_functions.R")
 ####

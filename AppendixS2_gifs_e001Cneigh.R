@@ -53,10 +53,28 @@ plot.gif <- function(specid){
 }
 #
 splist <- c("Schiscop","Agrorepe","Poaprate")
-savefun <- function(x){
-  # x="Agrorepe"
-  animate(plot.gif(specid=x),duration = 32,rewind=FALSE,
-          height = 6, width = 6, units = "in", res = 300)
-  anim_save(filename = paste("Figures/Species_gif/",x,".gif",sep=""))
-}
-walk(.x = splist,.f = savefun)
+animate(plot.gif("Agrorepe"),duration = 32,rewind=FALSE,
+        renderer=ffmpeg_renderer(
+          format = "mov",
+          ffmpeg = NULL,
+          options = list(pix_fmt = "yuv420p")),
+        height = 6, width = 6, units = "in", res = 300)
+animate(plot.gif("Poaprate"),duration = 32,rewind=FALSE,
+        renderer=ffmpeg_renderer(
+          format = "mov",
+          ffmpeg = NULL,
+          options = list(pix_fmt = "yuv420p")),
+        height = 6, width = 6, units = "in", res = 300)
+animate(plot.gif("Schiscop"),duration = 32,rewind=FALSE,
+        renderer=ffmpeg_renderer(
+          format = "mov",
+          ffmpeg = NULL,
+          options = list(pix_fmt = "yuv420p")),
+        height = 6, width = 6, units = "in", res = 300)
+# savefun <- function(x){
+#   x="Agrorepe"
+#   animate(plot.gif(specid=x),duration = 32,rewind=FALSE,
+#           height = 6, width = 6, units = "in", res = 300)
+#   anim_save(filename = paste("Figures/Species_gif/",x,".gif",sep=""))
+# }
+# walk(.x = splist,.f = savefun)

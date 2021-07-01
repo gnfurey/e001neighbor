@@ -6,7 +6,7 @@ library(viridis)
 library(spdep)
 library(gstat)
 #
-source("neighborhood_functions.R")
+source("helperfunctions_e001Cneigh.R")
 e001 <- read_csv("2021-06-25-e001.csv")
 e001$NTrt <- as.factor(e001$NTrt)
 e001$NTrt <- factor(e001$NTrt,levels(e001$NTrt)[c(9,1,2:8)])
@@ -14,8 +14,8 @@ e001$NTrt <- factor(e001$NTrt,levels(e001$NTrt)[c(9,1,2:8)])
 meansr <- e001 %>% 
   filter(Year<2005) %>%
   # filter(Year>1994)%>%
-  group_by(Plot,NAdd,ln.NAtm.NAdd,row,col,NTrt,edgeeffect) %>%
-  summarise_at(vars(means.Sr.4,sr,means.NAdd.4,Evenness,ShanWinr,EtoH),
+  group_by(Plot,NAdd,ln.NAtm.NAdd,row,col,NTrt) %>%
+  summarise_at(vars(means.Sr.4,sr),
                funs(m=mean,se=my.stand))
 #in caption
 round(range(meansr$sr_m),1)

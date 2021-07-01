@@ -1,7 +1,7 @@
 library(tidyverse)
 library(nlme)
 library(lme4)
-source("neighborhood_functions.R")
+source("helperfunctions_e001Cneigh.R")
 #model specification
 #response is number of species
 #ln.NAtm.NAdd = log(Added N +1)
@@ -50,10 +50,8 @@ doc1 <- read_docx() %>%
 print(doc1, target = "Tables/SupplementalTable1.docx")
 
 #####
-write.csv(x=out,file = "Tables/SupplementalTable1_neighe001.csv",row.names = FALSE)
+# write.csv(x=out,file = "Tables/SupplementalTable1_neighe001.csv",row.names = FALSE)
 #line in results comparing effectsize to base
-base <- dat %>% filter(Year==1982) %>% summarise(sr=mean(sr))
-8/base$sr
 #test with type III
 car::Anova(Table1,type="III")
 ########
@@ -92,22 +90,4 @@ Table1.1.ntrt.cor <- update(Table1.1.ntrt,
 Table1.1 <- update(Table1.1,method="REML")
 Table1.1.ntrt <- update(Table1.1.ntrt,method="REML")
 Table1.1.ntrt.cor <- update(Table1.1.ntrt.cor,method="REML")
-
-##############
-#try with a poisson as data is count
-#perhaps one should use poisson for integers, but it is more complicated and it does not change the results
-#using scaled coefficients
-Table1.glmer.0 <- glmer(sr~
-                          ln.NAtm.NAdd_c+Year_c+
-                          (1|Plot),
-                        family="poisson",
-                        data=dat)
 #
-dat$means.Sr.4_mean_c <- scale_this(dat$means.Sr.4_mean)
-Table1.glmer.1 <- glmer(sr~
-                          ln.NAtm.NAdd_c+means.Sr.4_mean_c+
-                          Year_c+(1|Plot),
-                        family="poisson",
-                        data=dat)
-#
-summary(Table1.glmer.1)
