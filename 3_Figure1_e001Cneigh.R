@@ -12,13 +12,12 @@ e001$NTrt <- factor(e001$NTrt,levels(e001$NTrt)[c(9,1,2:8)])
 #get mean data set
 meansr <- e001 %>% 
   filter(Year<2005) %>%
-  # filter(Year>1994)%>%
   group_by(Plot,NAdd,ln.NAtm.NAdd,row,col,NTrt) %>%
   summarise_at(vars(means.Sr.4,sr),
                funs(m=mean,se=my.stand))
+
 #get unique number of years
 yrs <- e001 %>% 
-  # filter(Year>1994)
   filter(Year<2005)
 
 length(unique(yrs$Year))
@@ -51,6 +50,7 @@ mod2.ntrt <- gls(sr_m~
                  weights=varIdent(form=~1|NTrt),
                  data=meansr)  
 summary(mod2.ntrt)#line 268
+anova(mod2.ntrt)
 car::Anova(mod2.ntrt,type="III")
 #
 meansr$r.3 <- residuals(mod2,type="normalized")
@@ -69,12 +69,10 @@ dat.eff.2$se <- mod2.ntrt.fit$se.fit
 dat.eff.2$NAdd <- exp(dat.eff.2$ln.NAtm.NAdd)-1
 #
 nadd.p <- ggplot(dat.eff.2,aes(x=NAdd,y=fit))+
-  # ylab(expression(paste("Number of Species","(",mu["[1995-2004]"],")")))+
   ylab("Species Richness")+
-  
   # xlab(expression(paste("log"["e"],"(", "Added Nitrogen + Deposition ","(g" %.% "m"^-2,")",")")))+
   xlab(expression(paste("Added Nitrogen ","(g" %.% "m"^-2 %.% "yr"^-1,")")))+
-  scale_y_continuous(breaks=c(seq(from=2,to=15,by=3)),limits=c(2,15))+
+  scale_y_continuous(breaks=c(seq(from=0,to=15,by=3)),limits=c(0,15))+
   scale_x_continuous(breaks=round(unique(e001$NAdd),1),
                      labels=round(unique(e001$NAdd),1))+
   theme_classic()+
@@ -104,7 +102,6 @@ mean.resid.p<- ggplot(meansr,aes(x=means.Sr.4_m,y=r.2,label=Plot))+
              col="Black")+
   ylab("Normalized Residuals \n SR ~ Ln[N+D]")+
   scale_y_continuous(breaks=c(-2.5,-1.5,-0.5,0,0.5,1.5,2.5,3.5,4.5))+
-  # xlab(expression(paste("Neighborhood Number of Species ","(",mu["[1995,2004]"],")")))+
   xlab("Neighborhood Species Richness")+
   ggtitle("b")+
   theme_classic()+
@@ -155,6 +152,10 @@ c1 <- ggplot(out,aes(x=dist,y=estimate,fill=mod,col=mod))+
   geom_line()+
   geom_hline(yintercept = 0)+
   scale_x_continuous(breaks=c(1,2,3))+
+  # scale_fill_viridis(begin = 0.2,end = 0.8,discrete = TRUE,
+  #                     option = "A")+
+  # scale_color_viridis(begin = 0.2,end = 0.8,discrete = TRUE,
+  #                     option = "A")+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   guides(color=FALSE)+
@@ -229,4 +230,10 @@ ggsave(filename = "Figures/Figure1_neighe001.eps",
        dpi=600,
        plot = arrangeGrob(nadd.p,mean.resid.p,c1),
        height=140,width=82,unit="mm")
-
+#figure for reviewer 2
+# ggsave(filename = "Figures/Lag6_figure1",
+#        device = cairo_ps,
+#        dpi=600,
+#        plot = c1,
+#        height=140,width=82,unit="mm")
+#####

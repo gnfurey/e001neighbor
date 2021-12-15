@@ -49,7 +49,7 @@ plotfun <- function(x,dat){
   #get data
   dat <- dat %>% filter(Plot==x)
   #get pvalue corrected for six tests
-  pval.fdr <- round(dat$p.value.fdr,4)
+  pval.fdr <- round(dat$p.value.fdr,3)
   #plot
   #
   means1 <- round(mean(tmp$means.Sr.4),1)
@@ -61,17 +61,18 @@ plotfun <- function(x,dat){
     geom_line(aes(y=fitsr))+
     geom_line(aes(y=fitsr+se),linetype=2)+
     geom_line(aes(y=fitsr-se),linetype=2)+
-    scale_y_continuous(limits=c(3,24),breaks = c(5,10,15,20))+
+    scale_y_continuous(limits=c(0,24),breaks = c(0,5,10,15,20))+
     ylab("")+
     xlab("")+
     annotate(x=2000,y=23,geom="text",size=3,
-             label=paste("p",pval.fdr,sep="="))+
+             label=paste("p",pval.fdr,sep=" = "))+
     annotate(x=1985,y=23,geom="text",size=3,
-             label=paste("Plot",unique(tmp$Plot),sep="="))+
-    annotate(x=1988,y=5,geom="text",size=3,
-             label=paste("NeighborSR",means1,sep="="))+
+             label=paste("Plot",unique(tmp$Plot),sep=" = "))+
+    annotate(x=1989,y=2,geom="text",size=3,
+             label=paste("NeighborSR",means1,sep=" = "))+
     scale_x_continuous(limits=c(1982,2004),breaks=c(1982,1992,2002))+
     theme(plot.margin = margin(t = 0.5,r = 0.5,b = 0.5,l = 0.5),
+          panel.grid = element_blank(),
           axis.title = element_blank())
   p0
   return(p0)
@@ -106,11 +107,12 @@ o1 <- exec(.fn = grid.arrange,
                        family="Helvitica")),
            padding=unit(1,"mm"))
 o1
-ggsave(filename = "Figures/SuppFig1_neighe001.eps",
-       device = cairo_ps,
-       dpi=600,
-       plot = o1,
-       height=4,width=6,unit="in")#############
+#reviewer 2 move to main figure
+# ggsave(filename = "Figures/SuppFig1_neighe001.eps",
+#        device = cairo_ps,
+#        dpi=600,
+#        plot = o1,
+#        height=4,width=6,unit="in")#############
 ############
 #get mean across time
 justImean <- justI %>% 
@@ -123,40 +125,51 @@ coef <- mods %>%
   filter(term=="Year")
 #merge together
 justImean <- left_join(justImean,coef)
-##run major axis regression
+##invert slopes to improve understanding
 justImean$estimate <- justImean$estimate *-1
-#
+#means
 justImean %>% 
   filter(Plot %in% c(18,28,30)) %>% 
   summarise(estimate=mean(estimate))
-#
+#major axis reg
 sma1 <- smatr::sma(estimate~means.Sr.4,data=justImean)
+sma1
 #reported in text
 sma1$coef
 #get slope and intercept
 m1 <- sma1$coef[[1]][2,1]
 b1 <- sma1$coef[[1]][1,1]
 #
-o1 <- ggplot(justImean,aes(x=means.Sr.4,y=estimate,
+o2 <- ggplot(justImean,aes(x=means.Sr.4,y=estimate,
                            label=Plot,
                            col=p.value>0.05))+
   geom_text()+
-  scale_color_brewer(palette = "Dark2",
+  scale_color_viridis(begin = 0.2,end = 0.8,discrete = TRUE,
+                      option = "A",
                      name=expression(beta[Year]==0))+
   geom_errorbar(aes(ymax=estimate+std.error,
                 ymin=estimate-std.error,width=0.1))+
   geom_hline(yintercept = 0,linetype=2)+
-  theme_bw()+
-  guides(col=FALSE)+
-  ylab("Rate of species loss (species per year)")+
+  theme_bw(base_size = 10)+
+  ggtitle("g")+
+  ylab("Rate of species loss per year")+
   xlab("Average Neighborhood Species Richness")+
   geom_abline(slope=m1,intercept = b1)+
-  theme(legend.position = "bottom")
-o1
+  theme(legend.position = "bottom",
+        axis.text = element_text(size=7),
+        axis.title = element_text(size=9),
+        plot.title = element_text(size=10,family = "Helvetica",
+                                  margin = margin(0,0,0,0)))
+o2
 #
-ggsave(filename = "Figures/Figure4_neighe001.eps",
-       device = cairo_ps,
+# write_rds(x = o2,file = "Fig4b_colorblind.rds")
+#
+#
+ggsave(filename = "Figures/Figure4_neighe001.pdf",
+       # device = cairo_ps,
        dpi=600,
-       plot = o1,
-       height=4,width=4,unit="in")#############
+       plot = grid.arrange(o1,o2,
+                           heights=c(unit(3,"in"),unit(2,"in")),
+                           ncol=1),
+       height=6,width=6,unit="in")#############
                 

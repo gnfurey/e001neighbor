@@ -10,6 +10,7 @@ source("helperfunctions_e001Cneigh.R")
 #in the four adjacent plots
 #a separate variance term is used for each treatment
 dat <- read.csv("2021-06-25-e001.csv")
+dat$Year <- dat$Year-1982
 Table1 <- lme(sr~
                 ln.NAtm.NAdd+Year+
                 means.Sr.4_mean,
@@ -21,6 +22,7 @@ Table1 <- lme(sr~
               data=dat)
 plot(Table1)
 summary(Table1)
+length(unique(dat$Year))
 intervals(Table1,which="fixed")
 ###print out summary table
 out <- summary(Table1)$tTable
@@ -90,4 +92,4 @@ Table1.1.ntrt.cor <- update(Table1.1.ntrt,
 Table1.1 <- update(Table1.1,method="REML")
 Table1.1.ntrt <- update(Table1.1.ntrt,method="REML")
 Table1.1.ntrt.cor <- update(Table1.1.ntrt.cor,method="REML")
-#
+#######

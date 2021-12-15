@@ -13,17 +13,20 @@ splist <- c("Schiscop","Agrorepe","Poaprate")
 e001.l <- e001.l %>%
   filter(Specid %in% splist)
 # write.csv(x = e001.l,file = "2021-06-25-e001.l.csv")
+unique(e001.l$NTrt)
 #########
+e001.l$Year <- e001.l$Year-1982
 #plotting function and model fits
 plot_1 <- function(species,title1,c1,c2,ntrt){
   #get species 
-  # species= "Schiscop"
+  # species= "Poaprate"
   dat=e001.l
   #filter to species
   neigh <- paste(species,"neighbor",sep=".") # make neighborhood param
   dat <- dat %>% filter(Specid==species)
   #
   response <- "sqrt(Biomass)"
+  # response <- "Biomass"
   #fit three models with nitrogen,neighborhood,and their interaction
   tmp <- paste(response,"~ ",sep=" ")
   #get parameters
@@ -33,7 +36,6 @@ plot_1 <- function(species,title1,c1,c2,ntrt){
   #arrange properly for temporal autocorrelation function
   dat <- dat %>% arrange(Plot,Year)
   #########
-  #fit lme model 
   # mod2 <- lme(form2,
   #             random=~1|Plot,
   #             method="REML",
@@ -46,7 +48,10 @@ plot_1 <- function(species,title1,c1,c2,ntrt){
                                      random=~1|Plot,
                                      method="REML",
                                      correlation=corLin(form=~1|Plot,nugget = TRUE),
-                                     control=list(maxIter = 10000,msMaxIter=10000,niterEM=10000,msMaxEval = 10000),
+                                     control=list(maxIter = 100,
+                                                  msMaxIter=100,
+                                                  niterEM=100,
+                                                  msMaxEval = 100),
                                      weights=varIdent(form=~1|NTrt),
                                      data=dat))
   #get anova with non-sequential results
@@ -55,113 +60,133 @@ plot_1 <- function(species,title1,c1,c2,ntrt){
   out1$coef <- rownames(out1)
   #########
   #get N treatments
-  NTrt <- unique(dat$NTrt)
+  NTrt_tmp <- unique(dat$NTrt)
   #get mean neigborhood
   m1 <- mean(pull(dat,neigh))
   #get sd
   sd <- sd(pull(dat,neigh))
   #get high and low neighborhood biomass
-  val1 <- m1*2
-  val2 <- m1*.25
-  #make sequence
-  neighbor <- c(val1,m1,val2)
-  #get unique year values 
-  Year <- unique(dat$Year)
-  #create predictions
-  newdat <- expand_grid(NTrt,neighbor,Year)
-  #remame
-  colnames(newdat)[2] <- neigh
-  #get fits using delta method ?AICcmodavg
-  fits <-  AICcmodavg::predictSE(mod2,newdata=newdat,se=TRUE)
-  #get fits
-  newdat$fit <- fits$fit
-  newdat$se <- fits$se.fit
-  #rename column 
-  colnames(newdat)[2] <- "neighbor"
-  #get ylab
-  ylab1 <- expression(paste("Predicted Focal Plot Biomass", " ", "(", 
-                            "g" %.% "m"^-2, ")"))
-  #round neighborhood values
-  newdat$neighbor <- round(newdat$neighbor,0)
-  #make a factor
-  tmp <- data.frame(neighbor=c(val1,m1,val2),
-                    Neigh_biomass =c("2 * Mean","Mean","0.25 * Mean"))
-  #round
-  tmp$neighbor <- round(tmp$neighbor,0)
-  #merge together with new character
-  newdat <- left_join(newdat,tmp)
-  #get factor
-  newdat$Neigh_biomass <- as.factor(newdat$Neigh_biomass)
-  #reorder factor 
-  newdat$Neigh_biomass <- factor(newdat$Neigh_biomass,
-                                 levels(newdat$Neigh_biomass)[c(1,3,2)])
-  #make plotting function
-  
-  #
+  val1 <- 0
+  val2 <- m1+sd
+  ###########
+  library(emmeans)
+  #Agrorepe.neighbor 
+  #Schiscop.neighbor 
   pfun <- function(ntrt,title1){
-    # ntrt <- "F-9.52";title1="test"
-    newdat1 <- newdat %>% 
-      filter(NTrt %in% ntrt)
-    #
-    newdat1$NTrt <- as.character(newdat1$NTrt)
-    newdat1$NTrt <- ifelse(newdat1$NTrt=="I-0.00","0.00 g N",newdat1$NTrt)
-    newdat1$NTrt <- ifelse(newdat1$NTrt=="D-3.40","3.40 g N",newdat1$NTrt)
-    newdat1$NTrt <- ifelse(newdat1$NTrt=="F-9.52","9.52 g N",newdat1$NTrt)
-    #
-    p1 <- ggplot(newdat1,
-                 aes(x=Year,y=fit^2,col=Neigh_biomass))+
-      scale_color_brewer(palette = "Dark2",
-                         name="Neighborhood Abundance")+
-      facet_wrap(~NTrt)+
-      geom_line(size=1)+
-      ylab(ylab1)+
-      ggtitle(title1)+
-      theme_bw()+
-      scale_x_continuous(breaks = c(1982,1992,2002))+
-      theme(panel.grid.minor = element_blank(),
-            axis.text = element_text(size=7),
-            plot.margin = margin(t = 0,r = 3,b = 0,l = 3),
-            plot.title = element_text(size=7,family = "Helvetica",
-                                      face="italic",
-                                      margin = margin(0,0,0,0)))
-    p1
-    return(p1)
+    # ntrt="I-0.00"
+  parmy <- as.formula(paste("~",paste(parms2, collapse= "*"),sep=""))
+  print(parmy)
+  ##
+  list1 <- list(NTrt= c(ntrt),
+                neigh=c(val1,val2),
+                Year=seq(from=0,to=22))
+  names(list1)[2] <- neigh
+  list1
+  
+  ##
+  out <- emmeans(object = mod2, 
+           # specs = ~NTrt*Year*Schiscop.neighbor,
+           specs = parmy,
+           var="Year",
+           df=5,#very important n=6 at each NTrt
+          type="response",
+          sigmaAdjust = TRUE,
+          at=list1)
+  out
+  out1 <- as.data.frame(out)
+  colnames(out1) <- str_replace_all(string = colnames(out1),
+                                    pattern = neigh,
+                                    replacement = "neighvar")
+  # out1$neighvar <- c("0","mu+sd")
+  out1$NTrt <- as.character(out1$NTrt)
+    out1$NTrt <- ifelse(out1$NTrt=="I-0.00","0.00 g N",out1$NTrt)
+    out1$NTrt <- ifelse(out1$NTrt=="D-3.40","3.40 g N",out1$NTrt)
+    out1$NTrt <- ifelse(out1$NTrt=="F-9.52","9.52 g N",out1$NTrt)
+
+  p1 <- ggplot(out1,aes(x=Year,y=response,
+                  col=as.factor(neighvar),
+                  fill=as.factor(neighvar)))+
+    geom_line(size=1)+
+    geom_ribbon(aes(ymin=lower.CL,ymax=upper.CL),
+                size=0.5,
+                col=NA,
+                alpha=0.4)+
+    scale_fill_viridis(begin = 0.2,end = 0.8,discrete = TRUE,
+                       # labels=c("mu*0.25","mu*2"),
+                       labels=c("0","Mean+1SD"),
+                        option = "A", name="Neighborhood Abundance",
+    )+
+    scale_color_viridis(begin = 0.2,end = 0.8,discrete = TRUE,
+                        # labels=c("mu*0.25","mu*2"),
+                        labels=c("0","Mean+1SD"),
+                        option = "A", name="Neighborhood Abundance")+
+    guides(
+           fill="none")+
+    facet_wrap(~NTrt)+
+    ggtitle(title1)+
+    theme_bw()+
+    theme(panel.grid.minor = element_blank(),
+              strip.text.x = element_text(margin = margin(t =0.07,r = 0,b = 0.07,l = 0, "cm")),
+                    axis.text = element_text(size=7),
+                    plot.margin = margin(t = 0,r = 3,b = 0,l = 3),
+                    plot.title = element_text(size=7,family = "Helvetica",
+                                              face="italic",
+                                              margin = margin(0,0,0,0)))
+  p1
+  return(p1)
   }
-  p1 <- pfun(ntrt=ntrt,title1=title1)
-  # p1
   #control to get plot
   if(c2=="plot"){
+    # ntrt="I-0.00"
+    p1 <- pfun(ntrt=ntrt,title1=title1)
     return(p1)
   }
   #control to get table
   if(c2=="tab"){
     return(out1)
   }
+  if(c2=="coef"){
+    out2 <- as.data.frame(summary(mod2)$tTable)
+    out2$coef <- rownames(out2)
+    return(out2)
+  }
 }
 #
 #get species list
 splist <- set_names(splist)
+#################
 #get anova table for each species see ?map_dfr
 tabs_3 <- map_dfr(.x = splist,
                   .f = plot_1,
                   .id = "Species",
-                  c1="",c2="tab",
+                  c1="",c2="coef",
                   ntrt="",title1="")
 #get table 
 outtab_3 <- tabs_3
 #round
-outtab_3$`F-value` <- round(outtab_3$`F-value`,2)
-outtab_3$pval <- p.adjust(outtab_3$`p-value`,"fdr")
-outtab_3$`p-value` <- NULL
-outtab_3$pval <- ifelse(outtab_3$pval==0,
+colnames(outtab_3)
+outtab_3$Value <- 
+  ifelse(outtab_3$Species=="Agrorepe",
+         round(outtab_3$Value,4),
+         round(outtab_3$Value,3))#
+outtab_3$Std.Error <- 
+  ifelse(outtab_3$Species=="Agrorepe",
+        round(outtab_3$Std.Error,4),
+        round(outtab_3$Std.Error,3))
+        
+outtab_3$`t-value` <- 
+  ifelse(outtab_3$Species=="Agrorepe",
+        round(outtab_3$`t-value`,4),
+        round(outtab_3$`t-value`,3))#
+outtab_3$`p-value` <- ifelse(outtab_3$`p-value`==0,
                         "<0.001",
-                        ifelse(outtab_3$pval<0.01,
+                        ifelse(outtab_3$`p-value`<0.01,
                                "<0.01",
-                               round(outtab_3$pval,3)))
+                               round(outtab_3$`p-value`,3)))
 #
 colnames(outtab_3)
 outtab_3 <- outtab_3 %>%
-  select(coef,numDF:pval,Species)
+  select(coef,Value:`p-value`,Species)
 #subset each table
 schis <- outtab_3 %>% filter(Species=="Schiscop")
 agro <- outtab_3 %>% filter(Species=="Agrorepe")
@@ -171,43 +196,102 @@ library(officer)
 #format nice word tables
 #
 schis$Species <- NULL
-schis1 <- flextable(schis) %>% fontsize(size=12)
+schis1 <- flextable(schis) %>% fontsize(size=8)
 set_table_properties(schis1, width = 1, layout = "autofit")
 schis1 <- font(schis1,fontname = "Times")
 doc <- read_docx() %>% 
-  body_add_par(value = "Supplemental Table 3", style = "Normal") %>%
+  body_add_par(value = "Supplemental Table 5", style = "Normal") %>%
   body_add_flextable(value = schis1)
-print(doc, target = "Tables/SupplementalTable3.docx")
+print(doc, target = "Tables/SupplementalTable5_coef.docx")
 #
 agro$Species <- NULL
 #
 agro$coef <- str_replace_all(string =agro$coef,pattern = "Agrorepe",
                              "Elymrepe")
 #
-agro1 <- flextable(agro) %>% fontsize(size=12)
+agro1 <- flextable(agro) %>% fontsize(size=8)
 set_table_properties(agro1, width = 1, layout = "autofit")
 agro1 <- font(agro1,fontname = "Times")
 doc1 <- read_docx() %>% 
-  body_add_par(value = "Supplemental Table 4", style = "Normal") %>%
+  body_add_par(value = "Supplemental Table 7", style = "Normal") %>%
   body_add_flextable(value = agro1)
 #
-print(doc1, target = "Tables/SupplementalTable4.docx")
-#
-#####
+print(doc1, target = "Tables/SupplementalTable7_coef.docx")
 #
 poa$Species <- NULL
-poa1 <- flextable(poa) %>% fontsize(size=12)
+poa1 <- flextable(poa) %>% fontsize(size=8)
 set_table_properties(poa1, width = 1, layout = "autofit")
 poa1 <- font(poa1,fontname = "Times")
 doc1 <- read_docx() %>% 
-  body_add_par(value = "Supplemental Table 5", style = "Normal") %>%
+  body_add_par(value = "Supplemental Table 9", style = "Normal") %>%
   body_add_flextable(value = poa1)
 #
-print(doc1, target = "Tables/SupplementalTable5.docx")
+print(doc1, target = "Tables/SupplementalTable9_coef.docx")
 #
 #
-# write.csv(x = schis,file = "SupplementalTable3_new.csv",row.names = FALSE)
-# write.csv(x = agro,file = "SupplementalTable4_new.csv",row.names = FALSE)
+tabs_4 <- map_dfr(.x = splist,
+                  .f = plot_1,
+                  .id = "Species",
+                  c1="",c2="tab",
+                  ntrt="",title1="")
+#get table 
+outtab_4 <- tabs_4
+#get table 
+#round
+colnames(outtab_3)
+outtab_4$`F-value` <- round(outtab_4$`F-value`,2)
+outtab_4$pval <- p.adjust(outtab_4$`p-value`,"fdr")
+outtab_4$`p-value` <- NULL
+outtab_4$pval <- ifelse(outtab_4$pval==0,
+                             "<0.001",
+                             ifelse(outtab_4$pval<0.01,
+                                    "<0.01",
+                                    round(outtab_4$pval,3)))
+#
+colnames(outtab_4)
+outtab_4 <- outtab_4 %>%
+  select(coef,numDF:pval,Species)
+#subset each table
+schis <- outtab_4 %>% filter(Species=="Schiscop")
+agro <- outtab_4 %>% filter(Species=="Agrorepe")
+poa <- outtab_4 %>% filter(Species=="Poaprate")
+library(flextable)
+library(officer)
+#format nice word tables
+#
+schis$Species <- NULL
+schis1 <- flextable(schis) %>% fontsize(size=8)
+set_table_properties(schis1, width = 1, layout = "autofit")
+schis1 <- font(schis1,fontname = "Times")
+doc <- read_docx() %>% 
+  body_add_par(value = "Supplemental Table 4", style = "Normal") %>%
+  body_add_flextable(value = schis1)
+print(doc, target = "Tables/SupplementalTable4.docx")
+#
+agro$Species <- NULL
+#
+agro$coef <- str_replace_all(string =agro$coef,pattern = "Agrorepe",
+                             "Elymrepe")
+#
+agro1 <- flextable(agro) %>% fontsize(size=8)
+set_table_properties(agro1, width = 1, layout = "autofit")
+agro1 <- font(agro1,fontname = "Times")
+doc1 <- read_docx() %>% 
+  body_add_par(value = "Supplemental Table 6", style = "Normal") %>%
+  body_add_flextable(value = agro1)
+#
+print(doc1, target = "Tables/SupplementalTable6.docx")
+#
+poa$Species <- NULL
+poa1 <- flextable(poa) %>% fontsize(size=8)
+set_table_properties(poa1, width = 1, layout = "autofit")
+poa1 <- font(poa1,fontname = "Times")
+doc1 <- read_docx() %>% 
+  body_add_par(value = "Supplemental Table 8", style = "Normal") %>%
+  body_add_flextable(value = poa1)
+#
+print(doc1, target = "Tables/SupplementalTable8.docx")
+#
 ###########
 #make plots
 library(gridExtra)
@@ -244,17 +328,17 @@ leg <- legendfunc(o1)
 ggplot_build(o1)$layout$panel_scales_y
 #set proper y scale 
 o1 <- o1+
-  scale_y_continuous(limits=c(0,160))+
+  scale_y_continuous(limits=c(0,325))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o2 <- o2+
-  scale_y_continuous(limits=c(0,160))+
+  scale_y_continuous(limits=c(0,325))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o3 <- o3+
-  scale_y_continuous(limits=c(0,160))+
+  scale_y_continuous(limits=c(0,325))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 #
 o4 <-  plot_1(species="Schiscop",
               c1="short",c2="plot",
@@ -268,17 +352,17 @@ o6 <-  plot_1(species="Schiscop",
                 ntrt="F-9.52",title1="c: S. scorparium")
 #
 o4 <- o4+
-  scale_y_continuous(limits=c(0,140))+
+  scale_y_continuous(limits=c(0,225))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o5 <- o5+
-  scale_y_continuous(limits=c(0,140))+
+  scale_y_continuous(limits=c(0,225))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o6 <- o6+
-  scale_y_continuous(limits=c(0,140))+
+  scale_y_continuous(limits=c(0,225))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o6
 #####
 o9 <- plot_1(species="Poaprate",
@@ -294,24 +378,23 @@ o8 <- plot_1(species="Poaprate",
              c1="short",c2="plot",
              ntrt="D-3.40",title1="e: Poa pratensis")
 ggplot_build(o8)$layout$panel_scales_y
-
 o8
 #####
 o7 <- o7+
-  scale_y_continuous(limits=c(0,380))+
+  scale_y_continuous(limits=c(0,375))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o8 <- o8+
-  scale_y_continuous(limits=c(0,380))+
+  scale_y_continuous(limits=c(0,375))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 o9 <- o9+
-  scale_y_continuous(limits=c(0,380))+
+  scale_y_continuous(limits=c(0,375))+
   theme(axis.title = element_blank())+
-  guides(color=FALSE)
+  guides(color="none")
 #####
 #make label 
-bioindlan1 <- expression(paste("Species' Predicted Focal Plot Biomass", " ", "(", 
+bioindlan1 <- expression(paste("Species' Fitted Focal Plot Biomass", " ", "(", 
                  "g" %.% "m"^-2, ")"))
 library(grid)
 #generate figure
@@ -323,6 +406,7 @@ library(grid)
 #4) add in a common x and y axis
 #5) adjust the heights
 #6) save as a eps file 
+library(gridExtra)
 ggsave(filename = "Figures/Figure5_neighe001.eps",
        device = cairo_ps,
        dpi=600,
@@ -347,12 +431,13 @@ ggsave(filename = "Figures/Figure5_neighe001.eps",
 #get species means for the last 10 years
 meandat <- e001.l %>% 
   filter(Specid %in% splist) %>% 
-  filter(Year>1995) %>% 
+  filter(Year>1994-1982) %>% 
   group_by(Specid,NTrt) %>% 
   summarise(
     se=my.stand(Biomass),
     Biomass=mean(Biomass))
 #
+# length(unique(meandat$Year))
 #make a factor 
 match <- data.frame(Specid=c("Agrorepe","Schiscop","Poaprate"),
                     Species=c("E. repens","S. scoparium","P. pratensis"))

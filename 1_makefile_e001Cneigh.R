@@ -16,8 +16,8 @@ source("helperfunctions_e001Cneigh.R")
 # Metadata Provider:    - Cedar Creek LTER 
 # Contact:  Dan Bahauddin - Information Manager Cedar Creek Ecosystem Science Reserve  - webmaster@cedarcreek.umn.edu
 # Stylesheet v2.7 for metadata conversion into program: John H. Porter, Univ. Virginia, jporter@virginia.edu 
-inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-cdr/14/8/057e39850bd748d364df8a5ef60bb08d"
-download.file(inUrl1,"ple001.csv",method="curl")
+# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-cdr/14/8/057e39850bd748d364df8a5ef60bb08d"
+# download.file(inUrl1,"ple001.csv",method="curl")
 # #
 dat <-read.csv("ple001.csv",header=F 
                ,skip=1
@@ -268,9 +268,13 @@ write_csv(file = "2021-06-25-e001.csv",x = dat)
 # write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
 #file is too big with all species present
 #shorten to just those we use
+e001.lall <- e001.l 
 e001.l <- e001.l %>%
   filter(Specid %in% splist)
+
 write_csv(file = "2021-06-25-e001.l.csv",x = e001.l)
+write_csv(file = "2021-06-25-e001.all.csv",x = e001.lall)
+
 #clean it up
 rm(list=setdiff(ls(), c("e001","e001.l","srNXdata","dat")))
 ####
